@@ -6,7 +6,7 @@ on:
     tags:
       - "v*"
     branches:
-      - "develop"
+      - "stepd"
 
 env:
   REGISTRY: ghcr.io
@@ -57,8 +57,8 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=tag
-            type=sha,prefix=,enable=${{ github.ref == 'refs/heads/develop' }}
-            type=raw,enable=${{ github.ref == 'refs/heads/develop' }},value=develop
+            type=sha,prefix=,enable=${{ github.ref == 'refs/heads/stepd' }}
+            type=raw,enable=${{ github.ref == 'refs/heads/stepd' }},value=stepd
           flavor: latest=${{ startsWith(github.ref, 'refs/tags/') }}
       - name: Build and push Docker image
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
@@ -79,12 +79,12 @@ jobs:
 
     outputs:
       geth: ${{ steps.print.outputs.geth }}
-      bsc: ${{ steps.print.outputs.bsc }}
-      polygon: ${{ steps.print.outputs.polygon }}
+#      bsc: ${{ steps.print.outputs.bsc }}
+#      polygon: ${{ steps.print.outputs.polygon }}
 
     strategy:
       matrix:
-        binary: [geth, bsc, polygon]
+        binary: [geth]
     steps:
       - name: Log in to the Container registry
         uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
@@ -93,21 +93,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - run: |
-          docker pull ghcr.io/streamingfast/go-ethereum:${{ matrix.binary }}-latest
-          echo VERSION=$(docker inspect --format='{{index .Config.Labels "org.opencontainers.image.version"}}' 'ghcr.io/streamingfast/go-ethereum':${{ matrix.binary }}-latest) >> $GITHUB_ENV
-          echo SF_VERSION=$(echo "${{ needs.build-vanilla.outputs.tags }}" | grep -v develop | head -n 1 |cut -d: -f2) >> $GITHUB_ENV
+          docker pull ghcr.io/streamingfast/go-ethereum:release-geth-1.10.x-fh
+          echo SF_VERSION=$(echo "${{ needs.build-vanilla.outputs.tags }}" | grep -v stepd | head -n 1 |cut -d: -f2) >> $GITHUB_ENV
       - name: Generate docker tags/labels from github build context
         id: meta
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=tag,suffix=-${{ env.VERSION }}
             type=ref,event=tag,suffix=-${{ matrix.binary }}
-            type=sha,prefix=,suffix=-${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/develop' }}
-            type=sha,prefix=,suffix=-${{ matrix.binary }},enable=${{ github.ref == 'refs/heads/develop' }}
-            type=raw,prefix=,suffix=-${{ env.VERSION }},enable=${{ github.ref == 'refs/heads/develop' }},value=develop
-            type=raw,prefix=,suffix=-${{ matrix.binary }},enable=${{ github.ref == 'refs/heads/develop' }},value=develop
+            type=sha,prefix=,suffix=-release-geth-1.10.x-fh,enable=${{ github.ref == 'refs/heads/stepd' }}
+            type=raw,prefix=,suffix=-release-geth-1.10.x-fh,enable=${{ github.ref == 'refs/heads/stepd' }},value=stepd
           flavor: latest=false
       - name: Build and push Docker image
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
@@ -117,7 +113,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           file: ./Dockerfile.bundle
           build-args: |
-            CHAIN_VERSION=${{ env.VERSION }}
+            CHAIN_VERSION=release-geth-1.10.x-fh
             SF_VERSION=${{ env.SF_VERSION }}
 
       - id: print
@@ -152,6 +148,6 @@ jobs:
         with:
           args: |
             :done: *${{ github.repository }}* Success building docker images from ${{ github.ref_type }} _${{ github.ref_name }}_ (${{ github.actor }}) :sparkling_heart: ```${{ join(needs.build-vanilla.outputs.tags, ' ') }}
-            ${{ needs.bundle-docker-versions.outputs.geth }}
-            ${{ needs.bundle-docker-versions.outputs.bsc }}
-            ${{ needs.bundle-docker-versions.outputs.polygon }}```
+            ${{ needs.bundle-docker-versions.outputs.geth }}```
+#            ${{ needs.bundle-docker-versions.outputs.bsc }}
+#            ${{ needs.bundle-docker-versions.outputs.polygon }}```
