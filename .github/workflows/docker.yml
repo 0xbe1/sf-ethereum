@@ -33,6 +33,7 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
+
       - uses: actions/cache@v3
         with:
           path: |
@@ -41,6 +42,14 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+
+      - name: Branch name
+        id: extract_branch
+        shell: bash
+        run: |
+          echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+          echo "##[set-output name=release_train;]$(echo ${GITHUB_REF#refs/heads/release/})"
+
       - name: Build
         run: go build -v -ldflags "-X main.version=${{ github.event.ref }} -X main.commit=${{ github.sha }} -X main.date=$(date -u +%Y-%m-%dT%H:%MZ)" -o ./sfeth ./cmd/sfeth
 
@@ -50,6 +59,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Generate docker tags/labels from github build context
         id: meta
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
@@ -91,6 +101,14 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Branch name
+        id: extract_branch
+        shell: bash
+        run: |
+          echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+          echo "##[set-output name=release_train;]$(echo ${GITHUB_REF#refs/heads/release/})"
+
       - run: |
           docker pull ghcr.io/streamingfast/go-ethereum:release-geth-1.10.x-fh
           echo SF_VERSION=$(echo "${{ needs.build-vanilla.outputs.tags }}" | grep -v stepd | head -n 1 |cut -d: -f2) >> $GITHUB_ENV
@@ -104,6 +122,7 @@ jobs:
             type=sha,prefix=,suffix=-release-geth-1.10.x-fh,enable=${{ github.ref == 'refs/heads/stepd' }}
             type=raw,prefix=,suffix=-release-geth-1.10.x-fh,enable=${{ github.ref == 'refs/heads/stepd' }},value=stepd
           flavor: latest=false
+
       - name: Build and push Docker image
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
